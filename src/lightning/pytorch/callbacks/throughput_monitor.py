@@ -99,6 +99,12 @@ class ThroughputMonitor(Callback):
             # `fit` includes validation inside
             throughput = Throughput(available_flops=self.available_flops, world_size=trainer.world_size, **self.kwargs)
             self._throughputs[RunningStage.VALIDATING] = throughput
+        
+        if pl_module is not None and not hasattr(pl_module, "flops_per_batch"):
+            rank_zero_warn(
+                "When using the `ThroughputMonitor`, you need to define a `flops_per_batch` attribute or property"
+                f" in {type(pl_module).__name__} to compute the FLOPs."
+            )
 
         throughput = Throughput(available_flops=self.available_flops, world_size=trainer.world_size, **self.kwargs)
         stage = trainer.state.stage
@@ -136,10 +142,6 @@ class ThroughputMonitor(Callback):
         if hasattr(pl_module, "flops_per_batch"):
             flops_per_batch = pl_module.flops_per_batch
         else:
-            rank_zero_warn(
-                "When using the `ThroughputMonitor`, you need to define a `flops_per_batch` attribute or property"
-                f" in {type(pl_module).__name__} to compute the FLOPs."
-            )
             flops_per_batch = None
 
         self._samples[stage] += self.batch_size_fn(batch)
